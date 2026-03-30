@@ -18,7 +18,7 @@ const Login = ({ onLoginSuccess }) => {
     setIsLoggingIn(true);
     try {
       const user = await loginUser(username, password);
-      toast.success(`Welcome, ${user.name || username}!`);
+      toast.success(`Welcome, ${user.user_display_name || username}!`);
       onLoginSuccess(user);
     } catch (error) {
       toast.error('Invalid credentials. Please try again.');

@@ -124,3 +124,20 @@ export const uploadAttachment = async (file, recordSysId) => {
         throw error;
     }
 };
+
+export const getUserIncidents = async (userSysId) => {
+  try {
+    const config = getAxiosConfig();
+
+    const res = await axios.get(
+      `/api/now/table/incident?sysparm_query=caller_id=${userSysId}^ORDERBYDESCsys_created_on&sysparm_fields=number,short_description,sys_created_on&sysparm_limit=10`,
+      config
+    );
+
+    return res.data.result;
+
+  } catch (error) {
+    console.error("Error fetching incidents:", error);
+    throw error;
+  }
+};
