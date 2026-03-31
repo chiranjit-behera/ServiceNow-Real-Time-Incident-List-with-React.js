@@ -1,7 +1,13 @@
-import React, { useState, memo } from 'react';
+import React, { useState, memo, useMemo, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { createIncident, uploadAttachment } from '../api';
 import './CreateIncident.css';
+
+const formatFileSize = (size) => {
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+};
 
 const CreateIncident = memo(({ onClose, onSuccess, user }) => {
   const [formData, setFormData] = useState({
@@ -15,8 +21,32 @@ const CreateIncident = memo(({ onClose, onSuccess, user }) => {
   const [files, setFiles] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const previewFiles = useMemo(() => (
+    files.map((file, index) => ({
+      id: `${file.name}-${file.size}-${index}`,
+      file,
+      previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : null
+    }))
+  ), [files]);
+
+  useEffect(() => () => {
+    previewFiles.forEach((item) => {
+      if (item.previewUrl) {
+        URL.revokeObjectURL(item.previewUrl);
+      }
+    });
+  }, [previewFiles]);
+
   const handleFileChange = (e) => {
-    setFiles([...e.target.files]);
+    const selectedFiles = Array.from(e.target.files || []);
+    if (selectedFiles.length === 0) return;
+
+    setFiles((prev) => [...prev, ...selectedFiles]);
+    e.target.value = '';
+  };
+
+  const handleRemoveFile = (indexToRemove) => {
+    setFiles((prev) => prev.filter((_, index) => index !== indexToRemove));
   };
 
   const handleSubmit = async (e) => {
@@ -112,13 +142,46 @@ const CreateIncident = memo(({ onClose, onSuccess, user }) => {
 
           {/* Attachments */}
           <div className="form-group">
-            <label>Attachments</label>
+            <label htmlFor="incident-attachments">Attachments</label>
             <input
+              id="incident-attachments"
               type="file"
               multiple
               onChange={handleFileChange}
               disabled={isSubmitting}
             />
+
+            {previewFiles.length > 0 && (
+              <div className="attachment-preview-list">
+                {previewFiles.map((item, index) => (
+                  <div key={item.id} className="attachment-preview-card">
+                    <div className="attachment-preview-thumb">
+                      {item.previewUrl ? (
+                        <img src={item.previewUrl} alt={item.file.name} className="attachment-image" />
+                      ) : (
+                        <span className="attachment-file-icon">📎</span>
+                      )}
+                    </div>
+
+                    <div className="attachment-preview-meta">
+                      <span className="attachment-name" title={item.file.name}>{item.file.name}</span>
+                      <span className="attachment-size">{formatFileSize(item.file.size)}</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="attachment-remove-btn"
+                      onClick={() => handleRemoveFile(index)}
+                      disabled={isSubmitting}
+                      aria-label={`Remove ${item.file.name}`}
+                      title="Remove file"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Actions */}
