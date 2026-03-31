@@ -1,9 +1,60 @@
+/* ── Light Mode (default) ─────────────────────────── */
+:root,
+[data-theme="light"] {
+  --bg-page:        #ebedf0;
+  --bg-card:        #ffffff;
+  --bg-table-head:  #f8fafc;
+  --bg-row-hover:   #f1f5f9;
+  --bg-input:       #ffffff;
+  --bg-skeleton-a:  #e2e8f0;
+  --bg-skeleton-b:  #f0f4f8;
+
+  --text-primary:   #1a202c;
+  --text-secondary: #4a5568;
+  --text-muted:     #718096;
+  --text-link:      #0070d2;
+
+  --border-color:   #cbd5e0;
+  --border-subtle:  #edf2f7;
+
+  --btn-default-bg:     #ffffff;
+  --btn-default-color:  #4a5568;
+  --btn-default-border: #cbd5e0;
+  --btn-default-hover:  #edf2f7;
+}
+
+/* ── Dark Mode ────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg-page:        #0f1117;
+  --bg-card:        #1a1d27;
+  --bg-table-head:  #12151f;
+  --bg-row-hover:   #242736;
+  --bg-input:       #1e2130;
+  --bg-skeleton-a:  #2a2d3e;
+  --bg-skeleton-b:  #323548;
+
+  --text-primary:   #e2e8f0;
+  --text-secondary: #a0aec0;
+  --text-muted:     #718096;
+  --text-link:      #63b3ed;
+
+  --border-color:   #2d3748;
+  --border-subtle:  #2a2d3e;
+
+  --btn-default-bg:     #1e2130;
+  --btn-default-color:  #a0aec0;
+  --btn-default-border: #2d3748;
+  --btn-default-hover:  #242736;
+}
+
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    background-color: #ebedf0;
+    background-color: var(--bg-page);
     margin: 0;
-    color: #333;
+    color: var(--text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
+
 
 .incident-container {
     padding: 25px;

@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { logoutUser, getUserIncidents } from '../api';
+import { useTheme } from '../context/ThemeContext';
 import './Header.css';
 
 const Header = ({ user, onLogout }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [incidents, setIncidents] = useState([]);
+  const { isDark, toggleTheme } = useTheme();
 
   const username = user?.name || user?.user_name;
   const fullName = user.user_display_name;
@@ -77,6 +79,18 @@ const Header = ({ user, onLogout }) => {
           </div>
 
         </nav>
+
+        {/* 🌙 Dark Mode Toggle */}
+        <button
+          className="theme-toggle"
+          onClick={toggleTheme}
+          title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          aria-label="Toggle dark mode"
+        >
+          <span className="theme-toggle-track">
+            <span className="theme-toggle-thumb">{isDark ? '🌙' : '☀️'}</span>
+          </span>
+        </button>
 
         {/* 👤 Profile */}
         <div className="user-profile-menu">
