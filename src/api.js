@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE = "/api/proxy/1140272/real_time_incident_list/incident";
+const API_BASE = "/api/1140272/real_time_incident_list/incident";
 
 const getAxiosConfig = () => {
     const token = sessionStorage.getItem('sn_auth_token');
@@ -17,7 +17,7 @@ const getAxiosConfig = () => {
 export const loginUser = async (username, password) => {
     try {
         const token = btoa(`${username}:${password}`);
-        const res = await axios.get('/api/proxy/now/ui/user/current_user', {
+        const res = await axios.get('/api/now/ui/user/current_user', {
             headers: {
                 'Authorization': `Basic ${token}`,
                 'Accept': 'application/json'
@@ -89,7 +89,7 @@ export const updateIncidentState = async ({ sys_id, action, filter, search, limi
 export const createIncident = async (data) => {
     try {
         const config = getAxiosConfig();
-        const res = await axios.post('/api/proxy/now/table/incident', data, config);
+        const res = await axios.post('/api/now/table/incident', data, config);
         return res.data;
     } catch (error) {
         console.error("Error creating incident:", error);
@@ -106,7 +106,7 @@ export const uploadAttachment = async (file, recordSysId) => {
         formData.append('file', file);
 
         const res = await axios.post(
-            `/api/proxy-attachment?table_name=incident&table_sys_id=${recordSysId}&file_name=${file.name}`,
+            `/api/now/attachment/file?table_name=incident&table_sys_id=${recordSysId}&file_name=${file.name}`,
             formData,
             {
                 ...config,
@@ -130,7 +130,7 @@ export const getUserIncidents = async (userSysId) => {
     const config = getAxiosConfig();
 
     const res = await axios.get(
-      `/api/proxy/now/table/incident?sysparm_query=caller_id=${userSysId}^ORDERBYDESCsys_created_on&sysparm_fields=number,short_description,sys_created_on&sysparm_limit=10`,
+      `/api/now/table/incident?sysparm_query=caller_id=${userSysId}^ORDERBYDESCsys_created_on&sysparm_fields=number,short_description,sys_created_on&sysparm_limit=10`,
       config
     );
 
