@@ -477,12 +477,10 @@ const IncidentDashboard = ({ user }) => {
                   <tr
                     key={inc.sys_id}
                     className={`row-hover clickable-row ${updatingIds.has(inc.sys_id) ? 'row-updating' : ''}`}
-                    onClick={() => handleOpenIncident(inc)}
-                    onKeyDown={(event) => handleRowKeyDown(event, inc)}
                     tabIndex={0}
                     title="Click to view incident details"
                   >
-                    <td className="number">{getDisplayValue(inc.number)}</td>
+                    <td className="number" onClick={() => handleOpenIncident(inc)} onKeyDown={(event) => handleRowKeyDown(event, inc)}>{getDisplayValue(inc.number)}</td>
                     <td className="desc">{getDisplayValue(inc.short_description)}</td>
                     <td>
                       <span className={`state-badge ${getStateBadgeClass(inc.state)}`}>
