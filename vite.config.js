@@ -5,14 +5,18 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/api': {
+      // Mirrors the Vercel serverless function route: /api/proxy/* → ServiceNow
+      '/api/proxy': {
         target: 'https://dev318299.service-now.com',
         changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/proxy/, ''),
       },
-      '/oauth_token.do': {
+      // Attachment upload proxy (separate endpoint to handle multipart)
+      '/api/proxy-attachment': {
         target: 'https://dev318299.service-now.com',
         changeOrigin: true,
-      }
+        rewrite: () => '/api/now/attachment/file',
+      },
     }
   }
 })

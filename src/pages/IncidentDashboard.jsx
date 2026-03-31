@@ -156,6 +156,15 @@ const IncidentDashboard = ({ user }) => {
     }
   };
 
+  const handleCloseCreateModal = useCallback(() => {
+    setShowCreateModal(false);
+  }, []);
+
+  const handleCreateSuccess = useCallback(() => {
+    setPage(1);
+    loadData(1, filter, debouncedSearchText);
+  }, [filter, debouncedSearchText, loadData]);
+
   return (
     <>
       <div className="incident-container">
@@ -314,11 +323,8 @@ const IncidentDashboard = ({ user }) => {
       {showCreateModal && (
         <CreateIncident
           user={user}
-          onClose={() => setShowCreateModal(false)}
-          onSuccess={() => {
-            setPage(1);
-            loadData(1, filter, debouncedSearchText);
-          }}
+          onClose={handleCloseCreateModal}
+          onSuccess={handleCreateSuccess}
         />
       )}
     </>

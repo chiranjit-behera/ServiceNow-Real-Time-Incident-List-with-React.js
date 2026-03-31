@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import toast from 'react-hot-toast';
 import { createIncident, uploadAttachment } from '../api';
 import './CreateIncident.css';
 
-const CreateIncident = ({ onClose, onSuccess, user }) => {
+const CreateIncident = memo(({ onClose, onSuccess, user }) => {
   const [formData, setFormData] = useState({
     short_description: '',
     description: '',
@@ -144,6 +144,6 @@ const CreateIncident = ({ onClose, onSuccess, user }) => {
       </div>
     </div>
   );
-};
+});
 
 export default CreateIncident;
