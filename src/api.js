@@ -86,6 +86,24 @@ export const updateIncidentState = async ({ sys_id, action, filter, search, limi
     }
 };
 
+export const fetchIncidentDetails = async (sysId) => {
+    try {
+        const config = getAxiosConfig();
+        const res = await axios.get(`/api/now/table/incident/${sysId}`, {
+            ...config,
+            params: {
+                sysparm_display_value: true,
+                sysparm_fields: 'sys_id,number,short_description,description,state,priority,urgency,impact,active,caller_id,assigned_to,assignment_group,category,subcategory,sys_created_on,sys_updated_on,opened_at,close_notes,approval,u_approval_state'
+            }
+        });
+
+        return res.data?.result || {};
+    } catch (error) {
+        console.error('Error fetching incident details:', error);
+        throw error;
+    }
+};
+
 export const createIncident = async (data) => {
     try {
         const config = getAxiosConfig();
