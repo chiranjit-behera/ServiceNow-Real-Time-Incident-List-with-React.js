@@ -5,6 +5,7 @@
  *
  * Route: /api/proxy/* → https://<SN_INSTANCE>/*
  */
+import axios from 'axios';
 
 const SN_INSTANCE =
   process.env.SN_INSTANCE || 'https://dev318299.service-now.com';
@@ -15,9 +16,6 @@ export default async function handler(req, res) {
     const { path, ...queryParams } = req.query;
     const pathStr = Array.isArray(path) ? path.join('/') : path || '';
 
-    const queryString = new URLSearchParams(queryParams).toString();
-    const snUrl = `${SN_INSTANCE}/${pathStr}${queryString ? '?' + queryString : ''}`;
-
     const headers = {
       Accept: 'application/json',
       'Content-Type': 'application/json',
@@ -27,28 +25,27 @@ export default async function handler(req, res) {
       headers['Authorization'] = req.headers.authorization;
     }
 
-    const fetchOptions = {
+    const axiosConfig = {
       method: req.method,
+      url: `${SN_INSTANCE}/${pathStr}`,
       headers,
+      params: queryParams,
     };
 
     if (req.method !== 'GET' && req.method !== 'HEAD') {
-      fetchOptions.body = JSON.stringify(req.body);
+      axiosConfig.data = req.body;
     }
 
-    const response = await fetch(snUrl, fetchOptions);
-    const text = await response.text();
+    const response = await axios(axiosConfig);
+    res.status(response.status).json(response.data);
 
-    // Forward the exact status code ServiceNow returned.
-    res.status(response.status);
-
-    try {
-      res.json(JSON.parse(text));
-    } catch {
-      res.send(text);
-    }
   } catch (error) {
-    console.error('[proxy] Unhandled error:', error);
-    res.status(500).json({ error: 'Proxy request failed', message: error.message });
+    // Forward ServiceNow's actual error response (e.g. 401, 403, 404)
+    if (error.response) {
+      res.status(error.response.status).json(error.response.data);
+    } else {
+      console.error('[proxy] Unhandled error:', error.message);
+      res.status(500).json({ error: 'Proxy request failed', message: error.message });
+    }
   }
 }
