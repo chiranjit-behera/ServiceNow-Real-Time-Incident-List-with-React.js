@@ -80,8 +80,20 @@ const IncidentDashboard = ({ user }) => {
 
   useEffect(() => {
     const url = new URL(window.location);
-    url.searchParams.set('page', page);
-    url.searchParams.set('filter', filter);
+    const isDefaultPage = Number(page) === 1;
+    const isDefaultFilter = filter === 'active=true';
+
+    if (isDefaultPage) {
+      url.searchParams.delete('page');
+    } else {
+      url.searchParams.set('page', page);
+    }
+
+    if (isDefaultFilter) {
+      url.searchParams.delete('filter');
+    } else {
+      url.searchParams.set('filter', filter);
+    }
 
     if (searchText) {
       url.searchParams.set('search', searchText);
@@ -89,7 +101,7 @@ const IncidentDashboard = ({ user }) => {
       url.searchParams.delete('search');
     }
 
-    window.history.replaceState({}, '', url);
+    window.history.replaceState({}, '', `${url.pathname}${url.search}`);
   }, [page, filter, searchText]);
 
   useEffect(() => {

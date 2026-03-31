@@ -29,6 +29,23 @@ const persistAuthSession = (token, user) => {
   localStorage.setItem(BACKUP_USER_KEY, JSON.stringify(user));
 };
 
+const syncStoredUserProfile = (profilePatch) => {
+  const token = getStoredToken();
+  if (!token) return null;
+
+  const storedUser = parseStoredUser(sessionStorage.getItem(USER_KEY))
+    || parseStoredUser(localStorage.getItem(BACKUP_USER_KEY))
+    || {};
+
+  const nextUser = {
+    ...storedUser,
+    ...profilePatch
+  };
+
+  persistAuthSession(token, nextUser);
+  return nextUser;
+};
+
 const getStoredToken = () => sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(BACKUP_TOKEN_KEY);
 
 const buildAuthHeaders = (token, extraHeaders = {}) => ({
@@ -250,6 +267,69 @@ export const getUserIncidents = async (userSysId) => {
     });
   } catch (error) {
     console.error('Error fetching incidents:', error);
+    throw error;
+  }
+};
+
+export const fetchUserProfile = async (userSysId) => {
+  try {
+    return await withSessionRecovery(async () => {
+      const config = await getAxiosConfig();
+      const res = await axios.get(`/api/now/table/sys_user/${userSysId}`, {
+        ...config,
+        params: {
+          sysparm_display_value: true,
+          sysparm_fields: 'sys_id,name,user_name,email,title,department,location,company,bio,phone,mobile_phone,time_zone,photo'
+        }
+      });
+
+      return res.data?.result || {};
+    });
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    throw error;
+  }
+};
+
+export const updateUserProfile = async (userSysId, profileData) => {
+  try {
+    return await withSessionRecovery(async () => {
+      const config = await getAxiosConfig();
+      const payload = Object.fromEntries(
+        Object.entries(profileData).filter(([, value]) => value !== undefined)
+      );
+
+      const res = await axios.patch(`/api/now/table/sys_user/${userSysId}`, payload, {
+        ...config,
+        params: {
+          sysparm_display_value: true,
+          sysparm_input_display_value: true,
+          sysparm_fields: 'sys_id,name,user_name,email,title,department,location,company,bio,phone,mobile_phone,time_zone,photo'
+        }
+      });
+
+      const updated = res.data?.result || {};
+      const syncedUser = syncStoredUserProfile({
+        name: updated.name || payload.name,
+        user_display_name: updated.name || payload.name,
+        email: updated.email || payload.email,
+        phone: updated.phone || payload.phone,
+        mobile_phone: updated.mobile_phone || payload.mobile_phone,
+        title: updated.title || payload.title,
+        department: updated.department || payload.department,
+        location: updated.location || payload.location,
+        company: updated.company || payload.company,
+        photo: updated.photo || payload.photo
+      });
+
+      if (syncedUser) {
+        emitSessionEvent('sn-session-restored', { user: syncedUser });
+      }
+
+      return updated;
+    });
+  } catch (error) {
+    console.error('Error updating user profile:', error);
     throw error;
   }
 };

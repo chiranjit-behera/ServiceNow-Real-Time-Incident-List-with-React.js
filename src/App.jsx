@@ -3,6 +3,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import Header from './components/Header';
 import Login from './components/Login';
 import IncidentDashboard from './pages/IncidentDashboard';
+import ProfilePage from './pages/ProfilePage';
 import { logoutUser, restoreUserSession } from './api';
 import './index.css';
 
@@ -21,6 +22,16 @@ const getStoredUser = () => {
   }
 };
 
+const DASHBOARD_PATH = '/home';
+const PROFILE_PATH = '/profile';
+const DEFAULT_DASHBOARD_FILTER = 'active=true';
+const DEFAULT_DASHBOARD_PAGE = '1';
+
+const getInitialView = () => {
+  const url = new URL(window.location.href);
+  return url.pathname.endsWith(PROFILE_PATH) ? 'profile' : 'dashboard';
+};
+
 function App() {
   const warningTimeoutRef = useRef(null);
   const logoutTimeoutRef = useRef(null);
@@ -28,6 +39,8 @@ function App() {
 
   const [isAuthenticated, setIsAuthenticated] = useState(() => !!sessionStorage.getItem('sn_auth_token'));
   const [currentUser, setCurrentUser] = useState(() => getStoredUser());
+  const [activeView, setActiveView] = useState(() => getInitialView());
+  const [dashboardResetKey, setDashboardResetKey] = useState(0);
   const [isRestoringSession, setIsRestoringSession] = useState(() => !sessionStorage.getItem('sn_auth_token') && !!localStorage.getItem('sn_auth_token_backup'));
   const [showSessionWarning, setShowSessionWarning] = useState(false);
   const [secondsRemaining, setSecondsRemaining] = useState(WARNING_DURATION_SECONDS);
@@ -45,6 +58,7 @@ function App() {
     logoutUser();
     setIsAuthenticated(false);
     setCurrentUser(null);
+    setActiveView('dashboard');
     setIsRestoringSession(false);
 
     if (message) {
@@ -136,6 +150,21 @@ function App() {
   }, [handleLogout]);
 
   useEffect(() => {
+    const url = new URL(window.location.href);
+
+    if (activeView === 'profile') {
+      url.pathname = PROFILE_PATH;
+      url.search = '';
+    } else {
+      url.pathname = DASHBOARD_PATH;
+      url.searchParams.delete('view');
+    }
+
+    url.hash = '';
+    window.history.replaceState({}, '', `${url.pathname}${url.search}`);
+  }, [activeView]);
+
+  useEffect(() => {
     if (!isAuthenticated) {
       clearSessionTimers();
       return undefined;
@@ -183,6 +212,7 @@ function App() {
           onLoginSuccess={(user) => {
             setCurrentUser(user);
             setIsAuthenticated(true);
+            setActiveView('dashboard');
             resetInactivityTimer();
           }}
         />
@@ -196,8 +226,27 @@ function App() {
       <Header
         user={currentUser}
         onLogout={() => handleLogout('You have been signed out.')}
+        onOpenProfile={() => setActiveView('profile')}
+        onGoHome={() => {
+          const url = new URL(window.location.href);
+          url.pathname = DASHBOARD_PATH;
+          url.search = '';
+          url.hash = '';
+          window.history.replaceState({}, '', `${url.pathname}${url.search}`);
+          setDashboardResetKey((prev) => prev + 1);
+          setActiveView('dashboard');
+        }}
       />
-      <IncidentDashboard user={currentUser} />
+
+      {activeView === 'profile' ? (
+        <ProfilePage
+          user={currentUser}
+          onBack={() => setActiveView('dashboard')}
+          onProfileUpdated={(updatedUser) => setCurrentUser(updatedUser)}
+        />
+      ) : (
+        <IncidentDashboard key={dashboardResetKey} user={currentUser} />
+      )}
 
       {showSessionWarning && (
         <div className="session-warning-overlay">

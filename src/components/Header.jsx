@@ -5,7 +5,7 @@ import './Header.css';
 
 const NOTIFICATION_REFRESH_MS = 10000;
 
-const Header = ({ user, onLogout }) => {
+const Header = ({ user, onLogout, onOpenProfile, onGoHome }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [incidents, setIncidents] = useState([]);
@@ -104,15 +104,33 @@ const Header = ({ user, onLogout }) => {
     onLogout();
   };
 
+  const handleLogoClick = () => {
+    setNotificationOpen(false);
+    setDropdownOpen(false);
+
+    if (onGoHome) {
+      onGoHome();
+      return;
+    }
+
+    window.location.assign(window.location.pathname);
+  };
+
   return (
     <header className="app-header">
-      <div className="header-left">
+      <button
+        type="button"
+        className="header-left header-logo-button"
+        onClick={handleLogoClick}
+        aria-label="Go to home page"
+        title="Go to home page"
+      >
         <div className="header-logo-container">
           <svg width="24" height="24" viewBox="0 0 24 24">
             <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#293e40" strokeWidth="2"/>
           </svg>
         </div>
-      </div>
+      </button>
 
       <div className="header-right">
         <nav className="header-nav">
@@ -187,7 +205,16 @@ const Header = ({ user, onLogout }) => {
 
           {dropdownOpen && (
             <div className="profile-dropdown">
-              <a href="#" className="dropdown-item">Profile</a>
+              <button
+                type="button"
+                className="dropdown-item"
+                onClick={() => {
+                  setDropdownOpen(false);
+                  onOpenProfile?.();
+                }}
+              >
+                Profile
+              </button>
               <div className="dropdown-divider"></div>
               <button onClick={handleLogout} className="dropdown-item text-danger">
                 Logout
