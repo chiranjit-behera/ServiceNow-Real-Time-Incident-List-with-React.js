@@ -136,7 +136,15 @@ export const loginUser = async (username, password) => {
     emitSessionEvent('sn-session-restored', { user: res.data.result });
     return res.data.result;
   } catch (error) {
-    throw new Error('Invalid credentials');
+    if (error?.response?.status === 401) {
+      throw new Error('Invalid credentials. Please try again.');
+    }
+
+    if (error?.response?.status === 404) {
+      throw new Error('ServiceNow API route not found. Redeploy Vercel after adding the proxy rewrite.');
+    }
+
+    throw new Error('Unable to reach ServiceNow right now.');
   }
 };
 

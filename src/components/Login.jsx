@@ -21,7 +21,7 @@ const Login = ({ onLoginSuccess }) => {
       toast.success(`Welcome, ${user.user_display_name || username}!`);
       onLoginSuccess(user);
     } catch (error) {
-      toast.error('Invalid credentials. Please try again.');
+      toast.error(error.message || 'Unable to sign in. Please try again.');
     } finally {
       setIsLoggingIn(false);
     }
