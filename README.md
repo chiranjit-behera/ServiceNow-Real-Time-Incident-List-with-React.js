@@ -58,11 +58,7 @@ It demonstrates how to build a **decoupled, scalable, and enterprise-grade appli
 ---
 
 ## 🧠 Architecture
-React (Frontend)
-↓
-Scripted REST APIs (ServiceNow)
-↓
-GlideRecord (Database Layer)
+React (Frontend) -> Scripted REST APIs (ServiceNow) -> GlideRecord (Database Layer)
 
 ---
 
