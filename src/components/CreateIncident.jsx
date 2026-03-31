@@ -72,6 +72,9 @@ const CreateIncident = memo(({ onClose, onSuccess, user }) => {
       }
 
       toast.success('Incident created successfully');
+      window.dispatchEvent(new CustomEvent('sn-incidents-changed', {
+        detail: { type: 'created', sysId: incidentSysId }
+      }));
       onSuccess();
       onClose();
 

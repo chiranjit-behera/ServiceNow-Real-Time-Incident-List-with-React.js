@@ -1,31 +1,104 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { getUserIncidents } from '../api';
 import { useTheme } from '../context/ThemeContext';
 import './Header.css';
+
+const NOTIFICATION_REFRESH_MS = 10000;
 
 const Header = ({ user, onLogout }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [incidents, setIncidents] = useState([]);
+  const [hasNewNotifications, setHasNewNotifications] = useState(false);
+  const latestIncidentIdRef = useRef(null);
+  const clearBadgePulseTimeoutRef = useRef(null);
+  const notificationWrapperRef = useRef(null);
+  const profileMenuRef = useRef(null);
   const { isDark, toggleTheme } = useTheme();
 
   const username = user?.name || user?.user_name || 'ServiceNow User';
   const fullName = user?.user_display_name || username;
 
-  useEffect(() => {
-    if (user?.user_sys_id) {
-      fetchIncidents();
-    }
-  }, [user]);
+  const fetchIncidents = useCallback(async (showPulse = true) => {
+    if (!user?.user_sys_id) return;
 
-  const fetchIncidents = async () => {
     try {
       const data = await getUserIncidents(user.user_sys_id);
-      setIncidents(data);
+      const nextTopId = data?.[0]?.sys_id || null;
+
+      if (showPulse && latestIncidentIdRef.current && nextTopId && latestIncidentIdRef.current !== nextTopId) {
+        setHasNewNotifications(true);
+
+        if (clearBadgePulseTimeoutRef.current) {
+          clearTimeout(clearBadgePulseTimeoutRef.current);
+        }
+
+        clearBadgePulseTimeoutRef.current = setTimeout(() => {
+          setHasNewNotifications(false);
+        }, 4000);
+      }
+
+      latestIncidentIdRef.current = nextTopId;
+      setIncidents(data || []);
     } catch (err) {
       console.error(err);
     }
-  };
+  }, [user?.user_sys_id]);
+
+  useEffect(() => {
+    if (!user?.user_sys_id) return undefined;
+
+    fetchIncidents(false);
+
+    const refreshNotifications = () => fetchIncidents(true);
+    const intervalId = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        refreshNotifications();
+      }
+    }, NOTIFICATION_REFRESH_MS);
+
+    window.addEventListener('focus', refreshNotifications);
+    window.addEventListener('visibilitychange', refreshNotifications);
+    window.addEventListener('sn-incidents-changed', refreshNotifications);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('focus', refreshNotifications);
+      window.removeEventListener('visibilitychange', refreshNotifications);
+      window.removeEventListener('sn-incidents-changed', refreshNotifications);
+
+      if (clearBadgePulseTimeoutRef.current) {
+        clearTimeout(clearBadgePulseTimeoutRef.current);
+      }
+    };
+  }, [fetchIncidents, user?.user_sys_id]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notificationWrapperRef.current && !notificationWrapperRef.current.contains(event.target)) {
+        setNotificationOpen(false);
+      }
+
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    };
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setNotificationOpen(false);
+        setDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, []);
 
   const handleLogout = () => {
     onLogout();
@@ -45,14 +118,18 @@ const Header = ({ user, onLogout }) => {
         <nav className="header-nav">
 
           {/*  Notification */}
-          <div className="notification-wrapper">
+          <div className="notification-wrapper" ref={notificationWrapperRef}>
             <div
               className="nav-item"
-              onClick={() => setNotificationOpen(!notificationOpen)}
+              onClick={() => {
+                setNotificationOpen((prev) => !prev);
+                setDropdownOpen(false);
+                setHasNewNotifications(false);
+              }}
             >
               Notification 🔔
               {incidents.length > 0 && (
-                <span className="badge">{incidents.length}</span>
+                <span className={`badge ${hasNewNotifications ? 'badge-live' : ''}`}>{incidents.length}</span>
               )}
             </div>
 
@@ -92,10 +169,13 @@ const Header = ({ user, onLogout }) => {
         </button>
 
         {/* 👤 Profile */}
-        <div className="user-profile-menu">
+        <div className="user-profile-menu" ref={profileMenuRef}>
           <button
             className="profile-button"
-            onClick={() => setDropdownOpen(!dropdownOpen)}
+            onClick={() => {
+              setDropdownOpen((prev) => !prev);
+              setNotificationOpen(false);
+            }}
           >
             <img
               src={`https://ui-avatars.com/api/?name=${username}&background=random`}
