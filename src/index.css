@@ -223,3 +223,60 @@ body {
     color: #718096;
     font-size: 16px;
 }
+
+/* ── Skeleton Loading ─────────────────────────────── */
+@keyframes shimmer {
+    0%   { background-position: -600px 0; }
+    100% { background-position: 600px 0; }
+}
+
+.skeleton {
+    display: inline-block;
+    border-radius: 6px;
+    background: linear-gradient(
+        90deg,
+        #e2e8f0 25%,
+        #f0f4f8 50%,
+        #e2e8f0 75%
+    );
+    background-size: 600px 100%;
+    animation: shimmer 1.4s infinite linear;
+}
+
+.skeleton-row td {
+    padding: 16px 20px;
+    border-bottom: 1px solid #edf2f7;
+}
+
+.skeleton-text {
+    height: 14px;
+    display: block;
+}
+
+.skeleton-short  { width: 90px;  }
+.skeleton-long   { width: 220px; }
+
+.skeleton-badge {
+    height: 24px;
+    width: 72px;
+    border-radius: 20px;
+}
+
+.skeleton-btn {
+    height: 28px;
+    width: 58px;
+    border-radius: 6px;
+    margin-right: 6px;
+}
+
+/* ── Optimistic UI — row updating state ───────────── */
+.row-updating {
+    opacity: 0.5;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+
+.row-updating td {
+    background: #f8fafc;
+}
+

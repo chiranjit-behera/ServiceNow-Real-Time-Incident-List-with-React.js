@@ -2,11 +2,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { fetchIncidents, updateIncidentState } from '../api';
 import CreateIncident from '../components/CreateIncident';
+import SkeletonRow from '../components/SkeletonRow';
 
 const IncidentDashboard = ({ user }) => {
   const urlParams = new URLSearchParams(window.location.search);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [updatingIds, setUpdatingIds] = useState(new Set()); // Optimistic UI: track rows in-flight
+  const [initialLoad, setInitialLoad] = useState(true);    // Skeleton: only show on first load
 
   const [incidents, setIncidents] = useState([]);
   const [page, setPage] = useState(() => {
@@ -89,6 +92,7 @@ const IncidentDashboard = ({ user }) => {
       toast.error('Failed to load data.');
     } finally {
       setIsLoading(false);
+      setInitialLoad(false); // Skeleton only shown on the very first load
     }
   }, [pageSize, updatePagination]);
 
@@ -111,6 +115,22 @@ const IncidentDashboard = ({ user }) => {
   }, [page, filter, debouncedSearchText, loadData]);
 
   const handleUpdateState = async (sysId, action) => {
+    // ── Optimistic UI: snapshot current list for rollback ──
+    const previousIncidents = incidents;
+
+    // Immediately reflect the new approval state in the UI
+    const optimisticState = action === 'approve' ? 'Approved' : 'Rejected';
+    setIncidents(prev =>
+      prev.map(inc =>
+        inc.sys_id === sysId
+          ? { ...inc, approval_state: optimisticState }
+          : inc
+      )
+    );
+
+    // Mark this row as "updating" so it dims and blocks double-clicks
+    setUpdatingIds(prev => new Set(prev).add(sysId));
+
     try {
       const offset = (page - 1) * pageSize;
       const res = await updateIncidentState({
@@ -122,6 +142,7 @@ const IncidentDashboard = ({ user }) => {
         offset
       });
 
+      // Server confirmed — replace with real data
       setIncidents(res.data.incidents);
 
       const newTotalPage = Math.max(1, Math.ceil(res.data.total / pageSize));
@@ -132,7 +153,16 @@ const IncidentDashboard = ({ user }) => {
         toast.success(res.data.message);
       }
     } catch (error) {
-      toast.error('Failed to update state.');
+      // ── Rollback on failure ──
+      setIncidents(previousIncidents);
+      toast.error('Failed to update state. Changes rolled back.');
+    } finally {
+      // Always unmark the updating row
+      setUpdatingIds(prev => {
+        const next = new Set(prev);
+        next.delete(sysId);
+        return next;
+      });
     }
   };
 
@@ -220,38 +250,45 @@ const IncidentDashboard = ({ user }) => {
               </tr>
             </thead>
             <tbody>
-              {incidents.map(inc => (
-                <tr key={inc.sys_id} className="row-hover">
-                  <td className="number">{inc.number}</td>
-                  <td className="desc">{inc.short_description}</td>
-                  <td>
-                    <span className={`state-badge ${inc.state === 'New' ? 'state-new' : inc.state === 'In Progress' ? 'state-progress' : 'state-other'}`}>
-                      {inc.state}
-                    </span>
-                  </td>
-                  <td>
-                    <span className={`state-badge ${inc.approval_state === 'Approved' ? 'state-approved' : (inc.approval_state === 'Rejected' ? 'state-rejected' : 'state-other')}`}>
-                      {inc.approval_state || 'Pending'}
-                    </span>
-                  </td>
-                  <td>
-                    <button
-                      className="btn btn-success btn-sm"
-                      onClick={() => handleUpdateState(inc.sys_id, 'approve')}
-                      disabled={!!inc.approval_state}
-                    >
-                      Approve
-                    </button>
-                    <button
-                      className="btn btn-danger btn-sm"
-                      onClick={() => handleUpdateState(inc.sys_id, 'reject')}
-                      disabled={!!inc.approval_state}
-                    >
-                      Reject
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {/* ── Skeleton Loading: show on first load only ── */}
+              {initialLoad && isLoading
+                ? Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
+                : incidents.map(inc => (
+                  <tr
+                    key={inc.sys_id}
+                    className={`row-hover ${updatingIds.has(inc.sys_id) ? 'row-updating' : ''}`}
+                  >
+                    <td className="number">{inc.number}</td>
+                    <td className="desc">{inc.short_description}</td>
+                    <td>
+                      <span className={`state-badge ${inc.state === 'New' ? 'state-new' : inc.state === 'In Progress' ? 'state-progress' : 'state-other'}`}>
+                        {inc.state}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`state-badge ${inc.approval_state === 'Approved' ? 'state-approved' : (inc.approval_state === 'Rejected' ? 'state-rejected' : 'state-other')}`}>
+                        {inc.approval_state || 'Pending'}
+                      </span>
+                    </td>
+                    <td>
+                      <button
+                        className="btn btn-success btn-sm"
+                        onClick={() => handleUpdateState(inc.sys_id, 'approve')}
+                        disabled={!!inc.approval_state || updatingIds.has(inc.sys_id)}
+                      >
+                        {updatingIds.has(inc.sys_id) ? '...' : 'Approve'}
+                      </button>
+                      <button
+                        className="btn btn-danger btn-sm"
+                        onClick={() => handleUpdateState(inc.sys_id, 'reject')}
+                        disabled={!!inc.approval_state || updatingIds.has(inc.sys_id)}
+                      >
+                        {updatingIds.has(inc.sys_id) ? '...' : 'Reject'}
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              }
             </tbody>
           </table>
 
