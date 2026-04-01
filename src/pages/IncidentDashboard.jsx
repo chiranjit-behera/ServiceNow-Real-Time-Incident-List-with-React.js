@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { fetchIncidentDetails, fetchIncidents, updateIncidentState } from '../api';
+import { useIncidentStore } from '../store/incidentStore';
 import CreateIncident from '../components/CreateIncident';
 import SkeletonRow from '../components/SkeletonRow';
 
@@ -52,31 +53,54 @@ const getStateBadgeClass = (value, type = 'state') => {
 };
 
 const IncidentDashboard = ({ user }) => {
-  const urlParams = new URLSearchParams(window.location.search);
   const resizeStateRef = useRef(null);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [updatingIds, setUpdatingIds] = useState(new Set());
-  const [initialLoad, setInitialLoad] = useState(true);
-  const [selectedIncident, setSelectedIncident] = useState(null);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
-  const [sortConfig, setSortConfig] = useState({ key: 'number', direction: 'desc' });
-  const [columnWidths, setColumnWidths] = useState(DEFAULT_COLUMN_WIDTHS);
 
-  const [incidents, setIncidents] = useState([]);
-  const [page, setPage] = useState(() => {
-    const savedPage = urlParams.get('page');
-    return savedPage ? parseInt(savedPage, 10) : 1;
-  });
-  const [filter, setFilter] = useState(() => urlParams.get('filter') || 'active=true');
-  const [searchText, setSearchText] = useState(() => urlParams.get('search') || '');
+  const incidents = useIncidentStore((state) => state.incidents);
+  const selectedIncident = useIncidentStore((state) => state.selectedIncident);
+  const updatingIds = useIncidentStore((state) => state.updatingIds);
+  const initialLoad = useIncidentStore((state) => state.initialLoad);
+  const sortConfig = useIncidentStore((state) => state.sortConfig);
+  const columnWidths = useIncidentStore((state) => state.columnWidths);
+
+  const setIncidents = useIncidentStore((state) => state.setIncidents);
+  const setSelectedIncident = useIncidentStore((state) => state.setSelectedIncident);
+  const setUpdatingIds = useIncidentStore((state) => state.setUpdatingIds);
+  const setInitialLoad = useIncidentStore((state) => state.setInitialLoad);
+  const setSortConfig = useIncidentStore((state) => state.setSortConfig);
+  const setColumnWidths = useIncidentStore((state) => state.setColumnWidths);
+
+  const page = useIncidentStore((state) => state.page);
+  const filter = useIncidentStore((state) => state.filter);
+  const searchText = useIncidentStore((state) => state.searchText);
+  const isLoading = useIncidentStore((state) => state.isLoading);
+  const totalPage = useIncidentStore((state) => state.totalPage);
+
+  const setPage = useIncidentStore((state) => state.setPage);
+  const setFilter = useIncidentStore((state) => state.setFilter);
+  const setSearchText = useIncidentStore((state) => state.setSearchText);
+  const setIsLoading = useIncidentStore((state) => state.setIsLoading);
+  const setTotalPage = useIncidentStore((state) => state.setTotalPage);
+
   const [debouncedSearchText, setDebouncedSearchText] = useState(searchText);
-  const [isLoading, setIsLoading] = useState(true);
   const [jumpPage, setJumpPage] = useState('');
-
   const [pageSize] = useState(5);
-  const [totalPage, setTotalPage] = useState(1);
   const [pages, setPages] = useState([]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+
+    const storedPage = parseInt(params.get('page') || '1', 10);
+    const storedFilter = params.get('filter') || 'active=true';
+    const storedSearch = params.get('search') || '';
+
+    setPage(storedPage);
+    setFilter(storedFilter);
+    setSearchText(storedSearch);
+    setDebouncedSearchText(storedSearch);
+  }, [setPage, setFilter, setSearchText, setDebouncedSearchText]);
 
   useEffect(() => {
     const url = new URL(window.location);
@@ -128,7 +152,7 @@ const IncidentDashboard = ({ user }) => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, []);
+  }, [setColumnWidths]);
 
   useEffect(() => {
     if (!selectedIncident?.sys_id) return;
@@ -137,7 +161,7 @@ const IncidentDashboard = ({ user }) => {
     if (refreshedIncident && refreshedIncident !== selectedIncident) {
       setSelectedIncident(refreshedIncident);
     }
-  }, [incidents, selectedIncident]);
+  }, [incidents, selectedIncident, setSelectedIncident]);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -195,13 +219,13 @@ const IncidentDashboard = ({ user }) => {
       const newTotalPage = Math.max(1, Math.ceil(res.data.total / pageSize));
       setTotalPage(newTotalPage);
       updatePagination(currentPage, newTotalPage);
-    } catch (error) {
+    } catch {
       toast.error('Failed to load data.');
     } finally {
       setIsLoading(false);
       setInitialLoad(false);
     }
-  }, [pageSize, updatePagination]);
+  }, [pageSize, updatePagination, setIncidents, setInitialLoad, setIsLoading, setTotalPage]);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -222,6 +246,19 @@ const IncidentDashboard = ({ user }) => {
 
     return () => clearInterval(intervalId);
   }, [page, filter, debouncedSearchText, loadData]);
+
+  useEffect(() => {
+    const onIncidentsChanged = () => {
+      const currentParams = new URLSearchParams(window.location.search);
+      const currentPage = parseInt(currentParams.get('page') || '1', 10);
+      const currentFilter = currentParams.get('filter') || 'active=true';
+      const currentSearch = currentParams.get('search') || '';
+      loadData(currentPage, currentFilter, currentSearch);
+    };
+
+    window.addEventListener('sn-incidents-changed', onIncidentsChanged);
+    return () => window.removeEventListener('sn-incidents-changed', onIncidentsChanged);
+  }, [loadData]);
 
   const sortedIncidents = useMemo(() => {
     const data = [...incidents];
@@ -299,12 +336,12 @@ const IncidentDashboard = ({ user }) => {
           approval_state: detailData.approval_state || detailData.u_approval_state || prev.approval_state
         };
       });
-    } catch (error) {
+    } catch {
       toast.error('Could not load full incident details.');
     } finally {
       setIsDetailLoading(false);
     }
-  }, []);
+  }, [setSelectedIncident]);
 
   const handleRowKeyDown = (event, incident) => {
     if (event.key === 'Enter' || event.key === ' ') {
@@ -352,7 +389,7 @@ const IncidentDashboard = ({ user }) => {
       if (res.data.message) {
         toast.success(res.data.message);
       }
-    } catch (error) {
+    } catch {
       setIncidents(previousIncidents);
       toast.error('Failed to update state. Changes rolled back.');
     } finally {
@@ -394,7 +431,7 @@ const IncidentDashboard = ({ user }) => {
   const handleCreateSuccess = useCallback(() => {
     setPage(1);
     loadData(1, filter, debouncedSearchText);
-  }, [filter, debouncedSearchText, loadData]);
+  }, [setPage, filter, debouncedSearchText, loadData]);
 
   return (
     <>

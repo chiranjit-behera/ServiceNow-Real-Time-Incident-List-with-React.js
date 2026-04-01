@@ -1,6 +1,7 @@
 import React, { useState, memo, useMemo, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { createIncident, uploadAttachment } from '../api';
+import { useIncidentStore } from '../store/incidentStore';
 import './CreateIncident.css';
 
 const formatFileSize = (size) => {
@@ -10,6 +11,9 @@ const formatFileSize = (size) => {
 };
 
 const CreateIncident = memo(({ onClose, onSuccess, user }) => {
+  const setPage = useIncidentStore((state) => state.setPage);
+  const setSearchText = useIncidentStore((state) => state.setSearchText);
+
   const [formData, setFormData] = useState({
     short_description: '',
     description: '',
@@ -72,6 +76,8 @@ const CreateIncident = memo(({ onClose, onSuccess, user }) => {
       }
 
       toast.success('Incident created successfully');
+      setPage(1);
+      setSearchText('');
       window.dispatchEvent(new CustomEvent('sn-incidents-changed', {
         detail: { type: 'created', sysId: incidentSysId }
       }));
