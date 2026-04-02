@@ -1,25 +1,21 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "rewrites": [
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "routes": [
+    { "handle": "filesystem" },
     {
-      "source": "/api/:path*",
-      "destination": "https://dev318299.service-now.com/api/:path*"
+      "src": "/api/(.*)",
+      "dest": "https://dev318299.service-now.com/api/$1"
     },
     {
-      "source": "/oauth_token.do",
-      "destination": "https://dev318299.service-now.com/oauth_token.do"
+      "src": "/oauth_token\\.do",
+      "dest": "https://dev318299.service-now.com/oauth_token.do"
     },
     {
-      "source": "/home",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/profile",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ]
 }
